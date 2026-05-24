@@ -741,6 +741,7 @@
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     // تم دمج المفاتيح الحقيقية الخاصة بـ miran-sales-dashboard بنجاح
+  // بيانات ربط الفايربيز الخاصة بك
     const firebaseConfig = {
         apiKey: "AIzaSyBD6w0IOuoZEUTtGPRCuZUhypfpgAMMsKI",
         authDomain: "miran-sales-dashboard.firebaseapp.com",
@@ -876,7 +877,7 @@
         }
     });
 
-    // دالة لحفظ شيت الإكسيل المتكامل (ليدز + مبيعات) داخل مسار موحد
+    // دالة لحفظ شيت الإكسيل المتكامل (ليدز + مبيعات)
     window.uploadDataToCloud = function(leads, sales) {
         if (spinner) spinner.style.display = 'block';
         set(ref(db, 'sales_dashboard/data'), {
@@ -891,7 +892,7 @@
             alert("❌ فشل الرفع السحابي، تأكد من إعدادات الـ Rules في Firebase.");
             console.error(err);
         });
-    }
+    };
 
     // دالة لحفظ تعديل الموظفين إلى السحابة
     window.uploadEmployeesToCloud = function(empDb) {
@@ -903,7 +904,8 @@
             if (spinner) spinner.style.display = 'none';
             alert("❌ فشل حفظ تعديل الموظفين سحابياً.");
         });
-   
+    };
+
 </script>
 
 <script>

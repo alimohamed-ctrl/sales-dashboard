@@ -231,7 +231,9 @@
 </head>
 <body>
 
-<div id="syncSpinner"><i class="fa-solid fa-rotate fa-spin me-2"></i> جاري مزامنة البيانات سحابياً...</div>
+<div id="syncSpinner" class="badge bg-dark p-2 text-white shadow-sm" style="display:none; position:fixed; top:20px; left:20px; z-index:9999; border-radius:30px;">
+    <i class="fa-solid fa-rotate fa-spin me-2"></i> <span id="syncStatusText">جاري تهيئة الاتصال السحابي...</span>
+</div>
 
 <div class="container-fluid">
     <div class="row">
@@ -751,167 +753,85 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // تم دمج المفاتيح الحقيقية الخاصة بـ miran-sales-dashboard بنجاح
+    // بيانات ربط الفايربيز الخاصة بك
     const firebaseConfig = {
-        apiKey: "AIzaSyBD6w0IOuoZEUTtGPRCuZUhypfpgAMMsKI",
+        apiKey: "AIzaSyBD6w0IOuoZEUTtGPRCuZUhypfpgAMMsKI"
         authDomain: "miran-sales-dashboard.firebaseapp.com",
         databaseURL: "https://miran-sales-dashboard-default-rtdb.firebaseio.com",
         projectId: "miran-sales-dashboard",
-        storageBucket: "miran-sales-dashboard.firebasestorage.app",
-        messagingSenderId: "542731770510",
-        appId: "1:542731770510:web:7fc94417d953f9f08547df"
+        storageBucket: "miran-sales-dashboard.appspot.com",
+        messagingSenderId: "572450849929",
+        appId: "1:572450849929:web:96e8b26117d98be3d875a6"
     };
 
-    // بدء الاتصال بـ Firebase
+    // بدء تشغيل الفايربيز
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // متغيرات النظام العامة
-    window.rawLeads = [];
-    window.rawSales = [];
-    window.empToSuperMap = {}; 
-    window.superTeamSizes = {}; 
-    window.supervisorsList = []; 
-    window.clientCourseToSourceMap = {};
-    window.clientToEmployeeMap = {}; 
-    window.employeeFilterType = 'all'; 
-    window.homeEmployeeFilterType = 'all'; 
+    // دالة رفع البيانات السحابية عند اختيار ملف إكسيل
+    window.uploadDataToCloud = function(leadsData) {
+        if (!leadsData || leadsData.length === 0) return;
+        
+        const dbRef = ref(db, "sales_dashboard/leads");
+        set(dbRef, leadsData)
+            .then(() => {
+                alert("✅ تم رفع البيانات ومزامنتها سحابياً بنجاح!");
+            })
+            .catch((error) => {
+                console.error("Firebase Sync Error: ", error);
+                alert("❌ حدث خطأ أثناء الحفظ السحابي: " + error.message);
+            });
+    };
 
-    window.employeeDatabase = [
-        { name: 'آية احمد', oldUser: 'CC 35', newUser: 'TT 06', category: 'استهداف', supervisor: 'علي' },
-        { name: 'عبد الرحمن', oldUser: 'CC 22', newUser: 'TT 01', category: 'استهداف', supervisor: 'علي' },
-        { name: 'مريم احمد', oldUser: 'CC 04', newUser: 'TT 11', category: 'استهداف', supervisor: 'علي' },
-        { name: 'محمد سيد', oldUser: 'CC 16', newUser: 'TT 09', category: 'استهداف', supervisor: 'علي' },
-        { name: 'عمرو عبدالعظيم', oldUser: 'CC 17', newUser: 'TT 10', category: 'استهداف', supervisor: 'علي' },
-        { name: 'حنين محيي', oldUser: 'CC 18', newUser: 'TT 12', category: 'استهداف', supervisor: 'علي' },
-        { name: 'افنان', oldUser: 'CC 12', newUser: 'TT 05', category: 'استهداف', supervisor: 'عبدالفتاح' },
-        { name: 'ابراهيم عادل', oldUser: 'CC 07', newUser: 'TT 08', category: 'استهداف', supervisor: 'عبدالفتاح' },
-        { name: 'ابراهيم خليل', oldUser: 'CC 26', newUser: 'TT 04', category: 'استهداف', supervisor: 'زينب' },
-        { name: 'حبيبه محمد', oldUser: 'GG80', newUser: 'GG80', category: 'استهداف', supervisor: 'زينب' },
-        { name: 'احمد خالد', oldUser: 'GG81', newUser: 'GG81', category: 'استهداف', supervisor: 'زينب' },
-        { name: 'مؤيد', oldUser: 'CC 23', newUser: 'TT 02', category: 'استهداف', supervisor: 'خالد' },
-        { name: 'محمد حسام', oldUser: 'CC 09', newUser: 'TT 07', category: 'استهداف', supervisor: 'خالد' },
-        { name: 'عبد الله', oldUser: 'CC 24', newUser: 'TT 03', category: 'استهداف', supervisor: 'خالد' },
-        { name: 'سارة', oldUser: 'CC 28', newUser: 'CC 28', category: 'رسمي', supervisor: 'عبدالفتاح' },
-        { name: 'ريناد حمدان', oldUser: 'CC 10', newUser: 'CC 10', category: 'رسمي', supervisor: 'عبدالفتاح' },
-        { name: 'عمر', oldUser: 'CC 34', newUser: 'CC 34', category: 'رسمي', supervisor: 'عبدالفتاح' },
-        { name: 'عمر مرسي', oldUser: 'CC 06', newUser: 'CC 06', category: 'رسمي', supervisor: 'عبدالفتاح' },
-        { name: 'سندس', oldUser: 'CC 08', newUser: 'CC 08', category: 'رسمي', supervisor: 'عبدالفتاح' },
-        { name: 'نغم', oldUser: 'CC 32', newUser: 'CC 32', category: 'رسمي', supervisor: 'زينب' },
-        { name: 'تاج', oldUser: 'CC 31', newUser: 'CC 31', category: 'رسمي', supervisor: 'خالد' },
-        { name: 'ريناد', oldUser: 'CC 03', newUser: 'CC 03', category: 'رسمي', supervisor: 'خالد' },
-        { name: 'معاذ', oldUser: 'CC 29', newUser: 'CC 29', category: 'رسمي', supervisor: 'خالد' },
-        { name: 'مصطفي فضل', oldUser: 'CC 30', newUser: 'CC 30', category: 'رسمي', supervisor: 'خالد' }
-    ];
+    // دالة رفع تعديلات جدول الموظفين
+    window.uploadEmployeesToCloud = function(employeeData) {
+        const dbRef = ref(db, "sales_dashboard/employees");
+        set(dbRef, employeeData)
+            .then(() => {
+                alert("✅ تم تحديث بيانات الموظفين سحابياً!");
+            })
+            .catch((error) => {
+                console.error("Firebase Employee Sync Error: ", error);
+            });
+    };
 
-    // الاستماع لقاعدة البيانات السحابية وجلب البيانات فور حدوث أي تغيير
-    const spinner = document.getElementById('syncSpinner');
-    spinner.style.display = 'block';
+    // المزامنة الحية فور فتح الموقع
+    window.addEventListener('DOMContentLoaded', () => {
+        const statusEl = document.getElementById('syncStatusText');
+        if (statusEl) statusEl.innerText = "جاري مزامنة البيانات من السحاب...";
 
-    // 1. مزامنة هيكل الموظفين
-    onValue(ref(db, 'sales_dashboard/employees'), (snapshot) => {
-        if(snapshot.exists()) {
-            window.employeeDatabase = snapshot.val();
-        }
-        updateSupervisorMapsFromDatabase();
-    });
-
-    // 2. مزامنة شيتات المبيعات والليدز الرئيسية
-    onValue(ref(db, 'sales_dashboard/data'), (snapshot) => {
-        spinner.style.display = 'none';
-        if (snapshot.exists()) {
-            const cloudData = snapshot.val();
-            window.rawLeads = cloudData.leads || [];
-            window.rawSales = cloudData.sales || [];
+        const dbRef = ref(db, "sales_dashboard");
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
             
-            if(window.rawLeads.length > 0) {
-                window.clientCourseToSourceMap = {};
-                window.clientToEmployeeMap = {}; 
-                
-                window.rawLeads.forEach(lead => {
-                    let clientNum = String(lead['رقم العميل'] || '').trim();
-                    let courseName = normalizeCourseName(lead['نوع الدورة']);
-                    let sourceCode = String(lead['كود التسويق'] || 'غير مححدد').trim();
-                    let employeeName = String(lead['الموظف'] || 'غير حدد').trim();
-                    
-                    if(clientNum) {
-                        let key = clientNum + "_" + courseName;
-                        window.clientCourseToSourceMap[key] = sourceCode;
-                        if(!window.clientCourseToSourceMap[clientNum]) window.clientCourseToSourceMap[clientNum] = sourceCode;
-                        if(employeeName && employeeName !== 'غير حدد' && employeeName !== '') {
-                            window.clientToEmployeeMap[clientNum] = employeeName;
-                        }
-                    }
-                });
-
-                let fileDates = [];
-                window.rawLeads.forEach(item => { if(item['التاريخ']) fileDates.push(item['التاريخ']); });
-                window.rawSales.forEach(item => { if(item['التاريخ']) fileDates.push(item['التاريخ']); });
-                
-                if(fileDates.length > 0) {
-                    fileDates.sort();
-                    document.getElementById('startDate').value = fileDates[0];
-                    document.getElementById('endDate').value = fileDates[fileDates.length - 1];
-                }
-
-                document.getElementById('dateFilterSection').classList.remove('d-none');
-                document.getElementById('quickStats').classList.remove('d-none');
-                document.getElementById('homeChartSection').classList.remove('d-none'); 
-                
-                let uploadBox = document.getElementById('uploadContainer');
-                if (uploadBox) {
-                    uploadBox.className = "card p-3 mb-4";
-                    uploadBox.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 text-start">
-                            <div class="d-flex align-items-center gap-3">
-                                <i class="fa-solid fa-cloud-check text-success fa-2x"></i>
-                                <div>
-                                    <h5 class="mb-0 fw-bold">البيانات محملة بالكامل ومزامنة من السحابة بنجاح</h5>
-                                    <p class="text-muted small mb-0">لوحة التحكم نشطة الآن للجميع. تحديث الشيت متاح من هنا في أي وقت.</p>
-                                </div>
-                            </div>
-                            <div style="min-width: 260px;">
-                                <input type="file" id="excelFile" class="form-control form-control-sm" accept=".xlsx, .xls">
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('excelFile').addEventListener('change', handleFile, false);
-                }
-                applyFilters();
+            // حماية ذكية: لو السحاب فارغ افتح الموقع فوراً ولا تعلّق الصفحة
+            if (!data) {
+                if (statusEl) statusEl.innerText = "السحاب فارغ، جاهز لاستقبال أول ملف.";
+                return;
             }
-        } else {
-            document.getElementById('smartReportContent').innerHTML = '<div class="text-center p-4 text-muted">قاعدة البيانات السحابية فارغة حالياً. يرجى رفع ملف إكسيل لأول مرة لتفعيل السحابة.</div>';
-        }
+
+            // جلب البيانات لو كانت متوفرة
+            if (data.leads && data.leads.length > 0) {
+                window.rawLeads = data.leads;
+                if (typeof window.applyFilters === "function") {
+                    window.applyFilters();
+                }
+            }
+            
+            // جلب الموظفين لو كانوا متوفرين
+            if (data.employees && data.employees.length > 0) {
+                window.employeeDatabase = data.employees;
+                if (typeof window.updateSupervisorMapsFromDatabase === "function") {
+                    window.updateSupervisorMapsFromDatabase();
+                }
+            }
+
+            if (statusEl) statusEl.innerText = "تم مزامنة البيانات السحابية بنجاح.";
+        }, (error) => {
+            console.error("Firebase Read Error:", error);
+            if (statusEl) statusEl.innerText = "فشلت المزامنة التلقائية (قاعدة البيانات فارغة أو مغلقة).";
+        });
     });
-
-    // دالة لحفظ شيت الإكسيل المرفوع إلى السحابة
-    window.uploadDataToCloud = function(leads, sales) {
-        spinner.style.display = 'block';
-        set(ref(db, 'sales_dashboard/data'), {
-            leads: leads,
-            sales: sales,
-            lastUpdated: new Date().toISOString()
-        }).then(() => {
-            spinner.style.display = 'none';
-            alert("🚀 رائع! تم رفع البيانات وحفظها سحابياً بنجاح. أي شخص يفتح الموقع الآن سيرى التحديث فوراً.");
-        }).catch(err => {
-            spinner.style.display = 'none';
-            alert("❌ فشل الرفع السحابي، تأكد من إعدادات وضع الحماية (Test mode) في الفايربيز.");
-            console.error(err);
-        });
-    }
-
-    // دالة لحفظ تعديل الموظفين إلى السحابة
-    window.uploadEmployeesToCloud = function(empDb) {
-        spinner.style.display = 'block';
-        set(ref(db, 'sales_dashboard/employees'), empDb).then(() => {
-            spinner.style.display = 'none';
-            alert("💾 تم حفظ وتعميم قاعدة بيانات الموظفين الجديدة سحابياً عند الجميع!");
-        }).catch(err => {
-            spinner.style.display = 'none';
-            alert("❌ فشل حفظ تعديل الموظفين سحابياً.");
-        });
-    }
 </script>
 
 <script>
@@ -1237,7 +1157,7 @@
                 datasets: [{ label: 'عدد الإتمامات والمبيعات', data: ttggData.map(d => d.sales), backgroundColor: '#7c3aed', borderRadius: 4, barPercentage: 0.45, type: 'bar' },
                            { label: 'خط التارجت المطلوب (15 إتمام)', data: ttggData.map(() => 15), borderColor: '#ef4444', borderWidth: 2.5, borderDash: [5, 5], pointRadius: 0, type: 'line', fill: false }]
             },
-            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } }, scales: { y: { beginAtZero: true, grid: { color: dynamicGridColor }, ticks: { color: dynamicTextColor, font: { family: 'Cairo', weight: 'bold' } } }, x: { grid: { display: false }, ticks: { color: dynamicTextColor, font: { family: 'Cairo', weight: 'bold' } } } }, plugins: { legend: { labels: { font: { family: 'Cairo', weight: 'bold' }, color: dynamicTextColor } } } }
+            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } }, scales: { y: { beginAtZero: true, grid: { color: dynamicGridColor }, ticks: { color: dynamicTextColor, font: { family: 'Cairo', weight: 'bold' } } }, x: { grid: { display: false }, ticks: { color: dynamicTextColor, font: { family: 'Cairo', weight: 'bold' } } }, plugins: { legend: { labels: { font: { family: 'Cairo', weight: 'bold' }, color: dynamicTextColor } } } }
         });
     }
 
@@ -1534,3 +1454,55 @@
         employeeTimelineChartInstance = new Chart(document.getElementById('employeeTimelineChart').getContext('2d'), {
             type: 'line',
             data: { labels: sortedDates, datasets: isTtGg ? [{ label: 'الإتمامات اليومية', data: sortedDates.map(d => dailySalesMap[d]), borderColor: '#7c3aed', fill: true }] : [{ label: 'الليدز اليومية', data: sortedDates.map(d => dailyLeadsMap[d]), borderColor: '#3b82f6' }, { label: 'الإتمامات اليومية', data: sortedDates.map(d => dailySalesMap[d]), borderColor: '#10b981' }] }
+        });
+        document.getElementById('employeeMainView').classList.add('d-none'); document.getElementById('employeeDetailView').classList.remove('d-none');
+    }
+
+    function hideEmployeeDetails() { let d = document.getElementById('employeeDetailView'); let m = document.getElementById('employeeMainView'); if (d && m) { d.classList.add('d-none'); m.classList.remove('d-none'); } }
+    function copyTableToClipboard(tableId) { let t = document.getElementById(tableId); if (!t) return; let text = ""; t.querySelectorAll('tr').forEach((row, rIdx) => { let cells = row.querySelectorAll('th, td'); let rowText = []; cells.forEach(c => rowText.push(c.innerText.trim())); text += (rIdx === 0 ? "📊 " : "🔹 ") + rowText.join(" \t ") + "\n"; }); navigator.clipboard.writeText(text).then(() => alert("✅ تم النسخ!")); }
+    function takeTableScreenshot(tableId, fileName) { let el = document.getElementById(tableId); const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark'; html2canvas(el, { scale: 3, backgroundColor: isDark ? '#0f172a' : '#ffffff' }).then(canvas => { let link = document.createElement('a'); link.download = `${fileName}.png`; link.href = canvas.toDataURL('image/png'); link.click(); }); }
+    
+    function downloadExcelTemplate() {
+        const wb = XLSX.utils.book_new();
+        const headers = ['التاريخ', 'الوقت', 'رقم العميل', 'ارسال', 'تواصل', 'نوع الدورة', 'الموظف', 'الحالة 1', 'الأسم', 'ملاحظات', 'تاريخ', 'كود التسويق'];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers]), "طلبات مران");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers]), "إتمام بيع");
+        const rowsSup = employeeDatabase.map(emp => [emp.name, emp.oldUser, emp.newUser, emp.category, emp.supervisor]);
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['اسم الموظف', 'اليوزر القديم', 'اليوزر الجديد', 'الفئة', 'المشرف'], ...rowsSup]), "بيانات الموظفين");
+        XLSX.writeFile(wb, "Data_Template.xlsx");
+    }
+
+    function renderModalEmployeeTable() {
+        const tbody = document.getElementById('modalEmployeeTableBody'); tbody.innerHTML = '';
+        employeeDatabase.forEach((emp, index) => {
+            tbody.innerHTML += `<tr><td><input type="text" class="form-control form-control-sm text-center emp-name text-primary fw-bold" value="${emp.name || ''}"></td><td><input type="text" class="form-control form-control-sm text-center emp-old font-monospace" value="${emp.oldUser || ''}"></td><td><input type="text" class="form-control form-control-sm text-center emp-new font-monospace" value="${emp.newUser || ''}"></td><td><input type="text" class="form-control form-control-sm text-center emp-cat" value="${emp.category || ''}"></td><td><input type="text" class="form-control form-control-sm text-center emp-sup fw-bold" value="${emp.supervisor || ''}"></td><td><button class="btn btn-outline-danger btn-sm border-0" onclick="deleteEmployeeRow(${index})"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+        });
+    }
+    function addNewEmployeeRow() { employeeDatabase.push({ name: '', oldUser: '', newUser: '', category: '', supervisor: '' }); renderModalEmployeeTable(); }
+    function deleteEmployeeRow(index) { employeeDatabase.splice(index, 1); renderModalEmployeeTable(); }
+    function openEmployeeModal() { renderModalEmployeeTable(); new bootstrap.Modal(document.getElementById('employeeModal')).show(); }
+
+    function saveEmployeeDatabase() {
+        const rows = document.querySelectorAll('#modalEmployeeTableBody tr'); let updatedDb = [];
+        rows.forEach(row => {
+            const name = row.querySelector('.emp-name').value.trim(); const oldUser = row.querySelector('.emp-old').value.trim(); const newUser = row.querySelector('.emp-new').value.trim(); const category = row.querySelector('.emp-cat').value.trim(); const supervisor = row.querySelector('.emp-sup').value.trim();
+            if (name || oldUser || newUser || supervisor) updatedDb.push({ name, oldUser, newUser, category, supervisor });
+        });
+        
+        if(window.uploadEmployeesToCloud) {
+            window.uploadEmployeesToCloud(updatedDb);
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('employeeModal'));
+            if (modalInstance) modalInstance.hide();
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        updateSupervisorMapsFromDatabase();
+        const today = new Date(); const startStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        const yesterday = new Date(); yesterday.setDate(today.getDate() - 1); const endStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+        document.getElementById('startDate').value = startStr; document.getElementById('endDate').value = endStr;
+    });
+</script>
+
+</body>
+</html>
